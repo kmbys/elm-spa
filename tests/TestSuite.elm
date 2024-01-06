@@ -6,16 +6,17 @@ import Test exposing (..)
 import Url exposing (Url)
 import Route exposing (Route)
 
-testParse : String -> String -> Maybe Route -> Test
-testParse name input expected =
+testFromUrl : String -> String -> Maybe Route -> Test
+testFromUrl name input expected =
     test name <|
         \_ ->
             Url.fromString ("http://example.com" ++ input)
-                |> Maybe.andThen Route.parse
+                |> Maybe.andThen Route.fromUrl
                 |> Expect.equal expected
 
 suite : Test
 suite =
     describe "Route"
-        [ testParse "should parse URL" "/" (Just Route.Top)
+        [ testFromUrl "should parse Top" "/" (Just Route.Top)
+        , testFromUrl "should parse User" "/foo" (Just (Route.User "foo"))
         ]
