@@ -9,4 +9,4 @@ type Route
 
 parse : Url -> Maybe Route
 parse url =
-    Debug.todo "implement"
+    Just Top
