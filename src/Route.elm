@@ -1,7 +1,7 @@
 module Route exposing (..)
 
 import Url exposing (Url)
-import Url.Parser exposing (Parser, map, string, top, oneOf)
+import Url.Parser exposing (Parser, map, string, top, oneOf, (</>))
 
 type Route
     = Top
@@ -13,6 +13,7 @@ parser =
     oneOf
         [ map Top top
         , map User string
+        , map Repo (string </> string)
         ]
 
 fromUrl : Url -> Maybe Route
