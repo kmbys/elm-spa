@@ -3,6 +3,7 @@ module Main exposing (main)
 import Browser
 import Browser.Navigation as Nav
 import Url
+import Url.Builder
 import Http
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -111,10 +112,22 @@ view model =
             ErrorPage error ->
                 text "something is wrong"
             TopPage ->
-                text "top page"
+                viewTopPage
             UserPage repos ->
                 text "user page"
             RepoPage issues ->
                 text "repo page"
         ]
     }
+
+viewTopPage : Html Msg
+viewTopPage =
+    ul []
+        [ viewLink (Url.Builder.absolute [ "nsbt" ] [])
+        , viewLink (Url.Builder.absolute [ "evancz" ] [])
+        , viewLink (Url.Builder.absolute [ "elm" ] [])
+        ]
+
+viewLink : String -> Html Msg
+viewLink path =
+    li [] [ a [ href path ] [ text path ]]
