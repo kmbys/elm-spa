@@ -7,6 +7,7 @@ import Url.Builder
 import Http
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Json.Decode as D
 
 import Route exposing (Route)
 
@@ -41,7 +42,9 @@ type alias Repo =
     }
 
 type alias Issue =
-    { title : String
+    { number : Int
+    , title : String
+    , state : String
     }
 
 init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -89,7 +92,27 @@ goTo maybeRoute model =
         Just (Route.User userName) ->
             ({ model | page = UserPage [ (Repo "repo1") ]}, Cmd.none)
         Just (Route.Repo userName repoName) ->
-            ({ model | page = RepoPage [ (Issue "issue1") ]}, Cmd.none)
+            ( model
+            , Http.get
+                { url =
+                    Url.Builder.crossOrigin "https://api.github.com"
+                        [ "repos", userName, repoName, "issues" ]
+                        []
+                , expect =
+                    Http.expectJson
+                        (Result.map RepoPage >> Loaded)
+                        issuesDecoder
+                }
+            )
+
+issuesDecoder : D.Decoder (List Issue)
+issuesDecoder =
+    D.list
+        (D.map3 Issue
+            (D.field "number" D.int)
+            (D.field "title" D.string)
+            (D.field "state" D.string)
+        )
         
 
 -- SUBSCRIPTIONS
@@ -112,22 +135,34 @@ view model =
             ErrorPage error ->
                 text "something is wrong"
             TopPage ->
-                viewTopPage
+                ulUsers
             UserPage repos ->
                 text "user page"
             RepoPage issues ->
-                text "repo page"
+                ulIssues issues
         ]
     }
 
-viewTopPage : Html Msg
-viewTopPage =
+ulUsers : Html Msg
+ulUsers =
     ul []
-        [ viewLink (Url.Builder.absolute [ "nsbt" ] [])
-        , viewLink (Url.Builder.absolute [ "evancz" ] [])
-        , viewLink (Url.Builder.absolute [ "elm" ] [])
+        [ liUser (Url.Builder.absolute [ "nsbt" ] [])
+        , liUser (Url.Builder.absolute [ "evancz" ] [])
+        , liUser (Url.Builder.absolute [ "elm" ] [])
         ]
 
-viewLink : String -> Html Msg
-viewLink path =
-    li [] [ a [ href path ] [ text path ]]
+liUser : String -> Html Msg
+liUser userName =
+    li [] [ a [ href userName ] [ text userName ]]
+
+ulIssues : List Issue -> Html Msg
+ulIssues issues =
+    ul [] (List.map liIssue issues)
+
+liIssue : Issue -> Html msg
+liIssue issue =
+    li []
+        [ span [] [ text ("[" ++ issue.state ++ "]") ]
+        , span [] [ text ("#" ++ String.fromInt issue.number) ]
+        , span [] [ text issue.title ]
+        ]
