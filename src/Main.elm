@@ -39,6 +39,12 @@ type Page
 
 type alias Repo =
     { name : String
+    , description : String
+    , language : Maybe String
+    , owner : String
+    , fork : Int
+    , star : Int
+    , watch : Int
     }
 
 type alias Issue =
@@ -90,7 +96,18 @@ goTo maybeRoute model =
         Just Route.Top ->
             ({ model | page = TopPage }, Cmd.none)
         Just (Route.User userName) ->
-            ({ model | page = UserPage [ (Repo "repo1") ]}, Cmd.none)
+            ( model
+            , Http.get
+                { url =
+                    Url.Builder.crossOrigin "https://api.github.com"
+                    [ "users", userName, "repos" ]
+                    []
+                , expect =
+                    Http.expectJson
+                        (Result.map UserPage >> Loaded)
+                        reposDecoder
+                }
+            )
         Just (Route.Repo userName repoName) ->
             ( model
             , Http.get
@@ -105,6 +122,19 @@ goTo maybeRoute model =
                 }
             )
 
+reposDecoder : D.Decoder (List Repo)
+reposDecoder =
+    D.list
+        (D.map7 Repo
+            (D.field "name" D.string)
+            (D.field "description" D.string)
+            (D.maybe (D.field "language" D.string))
+            (D.at [ "owner", "login" ] D.string)
+            (D.field "forks_count" D.int)
+            (D.field "stargazers_count" D.int)
+            (D.field "watchers_count" D.int)
+        )
+
 issuesDecoder : D.Decoder (List Issue)
 issuesDecoder =
     D.list
@@ -113,7 +143,7 @@ issuesDecoder =
             (D.field "title" D.string)
             (D.field "state" D.string)
         )
-        
+
 
 -- SUBSCRIPTIONS
 
