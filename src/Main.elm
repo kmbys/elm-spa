@@ -167,7 +167,7 @@ view model =
             TopPage ->
                 ulUsers
             UserPage repos ->
-                text "user page"
+                ulRepos repos
             RepoPage issues ->
                 ulIssues issues
         ]
@@ -184,6 +184,18 @@ ulUsers =
 liUser : String -> Html Msg
 liUser userName =
     li [] [ a [ href userName ] [ text userName ]]
+
+ulRepos : List Repo -> Html Msg
+ulRepos repos =
+    ul [] (List.map liRepo repos)
+
+liRepo : Repo -> Html msg
+liRepo repo =
+    let
+        path : String
+        path = Url.Builder.absolute [ repo.owner, repo.name ] []
+    in
+        li [] [ a [ href path ] [ text path ] ]
 
 ulIssues : List Issue -> Html Msg
 ulIssues issues =
