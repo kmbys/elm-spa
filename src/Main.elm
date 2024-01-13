@@ -37,6 +37,8 @@ type Page
     | UserPage (List Repo)
     | RepoPage (List Issue)
 
+type alias User = String
+
 type alias Repo =
     { name : String
     , description : String
@@ -169,7 +171,7 @@ view model =
                     _ ->
                         text (Debug.toString error)
             TopPage ->
-                ulUsers
+                ulUsers [ "nsbt", "evancz", "elm" ]
             UserPage repos ->
                 ulRepos repos
             RepoPage issues ->
@@ -177,17 +179,17 @@ view model =
         ]
     }
 
-ulUsers : Html Msg
-ulUsers =
-    ul []
-        [ liUser (Url.Builder.absolute [ "nsbt" ] [])
-        , liUser (Url.Builder.absolute [ "evancz" ] [])
-        , liUser (Url.Builder.absolute [ "elm" ] [])
-        ]
+ulUsers : List User -> Html Msg
+ulUsers users =
+    ul [] (List.map liUser users)
 
 liUser : String -> Html Msg
-liUser userName =
-    li [] [ a [ href userName ] [ text userName ]]
+liUser user =
+    let
+        path : String
+        path = Url.Builder.absolute [ user ] []
+    in
+        li [] [ a [ href path ] [ text path ]]
 
 ulRepos : List Repo -> Html Msg
 ulRepos repos =
