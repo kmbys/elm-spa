@@ -163,7 +163,11 @@ view model =
             NotFound ->
                 text "not found"
             ErrorPage error ->
-                text "something is wrong"
+                case error of
+                    Http.BadBody message ->
+                        pre [] [ text message ]
+                    _ ->
+                        text (Debug.toString error)
             TopPage ->
                 ulUsers
             UserPage repos ->
