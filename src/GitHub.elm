@@ -11,7 +11,7 @@ type alias User = String
 
 type alias Repo =
     { name : String
-    , description : String
+    , description : Maybe String
     , language : Maybe String
     , owner : String
     , fork : Int
@@ -61,7 +61,7 @@ reposDecoder =
     D.list
         (D.map7 Repo
             (D.field "name" D.string)
-            (D.field "description" D.string)
+            (D.maybe (D.field "description" D.string))
             (D.maybe (D.field "language" D.string))
             (D.at [ "owner", "login" ] D.string)
             (D.field "forks_count" D.int)

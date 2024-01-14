@@ -118,7 +118,7 @@ view model =
                     _ ->
                         text (Debug.toString error)
             TopPage ->
-                ulUsers [ "nsbt", "evancz", "elm" ]
+                ulUsers [ "nsbt", "qiskit", "evancz", "elm" ]
             UserPage repos ->
                 ulRepos repos
             RepoPage issues ->
