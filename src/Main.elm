@@ -9,6 +9,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 
 import Route exposing (Route)
+import Page.Repo
 import GitHub
 
 main : Program () Model Msg
@@ -35,7 +36,7 @@ type Page
     | ErrorPage Http.Error
     | TopPage
     | UserPage (List GitHub.Repo)
-    | RepoPage (List GitHub.Issue)
+    | RepoPage Page.Repo.Model
 
 init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
@@ -48,6 +49,7 @@ type Msg
     = UrlRequested Browser.UrlRequest
     | UrlChanged Url.Url
     | Loaded (Result Http.Error Page)
+    | RepoMsg Page.Repo.Msg
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -71,6 +73,18 @@ update msg model =
             }
             , Cmd.none
             )
+        RepoMsg repoMsg ->
+            case model.page of
+                RepoPage repoModel ->
+                    let
+                        (newRepoModel, topCmd) =
+                            Page.Repo.update repoMsg repoModel
+                    in
+                        ( { model | page = RepoPage newRepoModel}
+                        , Cmd.map RepoMsg topCmd
+                        )
+                _ ->
+                    ( model, Cmd.none )
 
 goTo : Maybe Route -> Model -> (Model, Cmd Msg)
 goTo maybeRoute model =
@@ -86,11 +100,12 @@ goTo maybeRoute model =
                 userName
             )
         Just (Route.Repo userName repoName) ->
-            ( model
-            , GitHub.getIssues
-                (Result.map RepoPage >> Loaded)
-                userName
-                repoName
+            let
+                ( repoModel, repoCmd ) =
+                    Page.Repo.init userName repoName
+            in
+            ( { model | page = RepoPage repoModel }
+            , Cmd.map RepoMsg repoCmd
             )
 
 
@@ -105,7 +120,7 @@ subscriptions _ =
 
 view : Model -> Browser.Document Msg
 view model =
-    { title = "GitHub viewer"
+    { title = "GitHub Viewer"
     , body =
         [ a [ href "/" ] [ h1 [] [ text "GitHub viewer" ] ]
         , case model.page of
@@ -121,8 +136,9 @@ view model =
                 ulUsers [ "nsbt", "qiskit", "evancz", "elm" ]
             UserPage repos ->
                 ulRepos repos
-            RepoPage issues ->
-                ulIssues issues
+            RepoPage repoPageModel ->
+                Page.Repo.view repoPageModel
+                    |> Html.map RepoMsg
         ]
     }
 
@@ -149,15 +165,3 @@ liRepo repo =
         path = Url.Builder.absolute [ repo.owner, repo.name ] []
     in
         li [] [ a [ href path ] [ text path ] ]
-
-ulIssues : List GitHub.Issue -> Html Msg
-ulIssues issues =
-    ul [] (List.map liIssue issues)
-
-liIssue : GitHub.Issue -> Html msg
-liIssue issue =
-    li []
-        [ span [] [ text ("[" ++ issue.state ++ "]") ]
-        , span [] [ text ("#" ++ String.fromInt issue.number) ]
-        , span [] [ text issue.title ]
-        ]
