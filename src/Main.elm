@@ -9,6 +9,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 
 import Route exposing (Route)
+import Page.User
 import Page.Repo
 import GitHub
 
@@ -35,7 +36,7 @@ type Page
     = NotFound
     | ErrorPage Http.Error
     | TopPage
-    | UserPage (List GitHub.Repo)
+    | UserPage Page.User.Model
     | RepoPage Page.Repo.Model
 
 init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -49,6 +50,7 @@ type Msg
     = UrlRequested Browser.UrlRequest
     | UrlChanged Url.Url
     | Loaded (Result Http.Error Page)
+    | UserMsg Page.User.Msg
     | RepoMsg Page.Repo.Msg
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -73,6 +75,18 @@ update msg model =
             }
             , Cmd.none
             )
+        UserMsg userMsg ->
+            case model.page of
+                UserPage userModel ->
+                    let
+                        (newUserModel, topCmd) =
+                            Page.User.update userMsg userModel
+                    in
+                        ( { model | page = UserPage newUserModel }
+                        , Cmd.map UserMsg topCmd
+                        )
+                _ ->
+                    ( model, Cmd.none )
         RepoMsg repoMsg ->
             case model.page of
                 RepoPage repoModel ->
@@ -80,7 +94,7 @@ update msg model =
                         (newRepoModel, topCmd) =
                             Page.Repo.update repoMsg repoModel
                     in
-                        ( { model | page = RepoPage newRepoModel}
+                        ( { model | page = RepoPage newRepoModel }
                         , Cmd.map RepoMsg topCmd
                         )
                 _ ->
@@ -94,19 +108,21 @@ goTo maybeRoute model =
         Just Route.Top ->
             ({ model | page = TopPage }, Cmd.none)
         Just (Route.User userName) ->
-            ( model
-            , GitHub.getRepos
-                (Result.map UserPage >> Loaded)
-                userName
-            )
+            let
+                ( userModel, userCmd ) =
+                    Page.User.init userName
+            in
+                ( { model | page = UserPage userModel }
+                , Cmd.map UserMsg userCmd
+                )
         Just (Route.Repo userName repoName) ->
             let
                 ( repoModel, repoCmd ) =
                     Page.Repo.init userName repoName
             in
-            ( { model | page = RepoPage repoModel }
-            , Cmd.map RepoMsg repoCmd
-            )
+                ( { model | page = RepoPage repoModel }
+                , Cmd.map RepoMsg repoCmd
+                )
 
 
 -- SUBSCRIPTIONS
@@ -122,7 +138,7 @@ view : Model -> Browser.Document Msg
 view model =
     { title = "GitHub Viewer"
     , body =
-        [ a [ href "/" ] [ h1 [] [ text "GitHub viewer" ] ]
+        [ a [ href "/" ] [ h1 [] [ text "GitHub Viewer" ] ]
         , case model.page of
             NotFound ->
                 text "not found"
@@ -134,8 +150,9 @@ view model =
                         text (Debug.toString error)
             TopPage ->
                 ulUsers [ "nsbt", "qiskit", "evancz", "elm" ]
-            UserPage repos ->
-                ulRepos repos
+            UserPage userPageModel ->
+                Page.User.view userPageModel
+                    |> Html.map UserMsg
             RepoPage repoPageModel ->
                 Page.Repo.view repoPageModel
                     |> Html.map RepoMsg
@@ -153,15 +170,3 @@ liUser user =
         path = Url.Builder.absolute [ user ] []
     in
         li [] [ a [ href path ] [ text path ]]
-
-ulRepos : List GitHub.Repo -> Html Msg
-ulRepos repos =
-    ul [] (List.map liRepo repos)
-
-liRepo : GitHub.Repo -> Html msg
-liRepo repo =
-    let
-        path : String
-        path = Url.Builder.absolute [ repo.owner, repo.name ] []
-    in
-        li [] [ a [ href path ] [ text path ] ]
