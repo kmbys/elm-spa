@@ -9,6 +9,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 
 import Route exposing (Route)
+import Page.Top
 import Page.User
 import Page.Repo
 import GitHub
@@ -34,14 +35,13 @@ type alias Model =
     
 type Page
     = NotFound
-    | ErrorPage Http.Error
-    | TopPage
+    | TopPage Page.Top.Model
     | UserPage Page.User.Model
     | RepoPage Page.Repo.Model
 
 init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
-    Model key TopPage
+    Model key (TopPage Page.Top.init)
         |> goTo (Route.fromUrl url)
 
 -- UPDATE
@@ -49,7 +49,6 @@ init flags url key =
 type Msg
     = UrlRequested Browser.UrlRequest
     | UrlChanged Url.Url
-    | Loaded (Result Http.Error Page)
     | UserMsg Page.User.Msg
     | RepoMsg Page.Repo.Msg
 
@@ -64,17 +63,6 @@ update msg model =
                     (model, Nav.load href)
         UrlChanged url ->
             goTo (Route.fromUrl url) model
-        Loaded result ->
-            ({ model
-                | page =
-                    case result of
-                        Ok page ->
-                            page
-                        Err e ->
-                            ErrorPage e
-            }
-            , Cmd.none
-            )
         UserMsg userMsg ->
             case model.page of
                 UserPage userModel ->
@@ -106,7 +94,11 @@ goTo maybeRoute model =
         Nothing ->
             ({ model | page = NotFound }, Cmd.none)
         Just Route.Top ->
-            ({ model | page = TopPage }, Cmd.none)
+            let
+                topModel =
+                    Page.Top.init
+            in
+                ({ model | page = TopPage topModel }, Cmd.none)
         Just (Route.User userName) ->
             let
                 ( userModel, userCmd ) =
@@ -142,14 +134,8 @@ view model =
         , case model.page of
             NotFound ->
                 text "not found"
-            ErrorPage error ->
-                case error of
-                    Http.BadBody message ->
-                        pre [] [ text message ]
-                    _ ->
-                        text (Debug.toString error)
-            TopPage ->
-                ulUsers [ "nsbt", "qiskit", "evancz", "elm" ]
+            TopPage topPageModel ->
+                Page.Top.view topPageModel
             UserPage userPageModel ->
                 Page.User.view userPageModel
                     |> Html.map UserMsg
@@ -158,15 +144,3 @@ view model =
                     |> Html.map RepoMsg
         ]
     }
-
-ulUsers : List GitHub.User -> Html Msg
-ulUsers users =
-    ul [] (List.map liUser users)
-
-liUser : GitHub.User -> Html Msg
-liUser user =
-    let
-        path : String
-        path = Url.Builder.absolute [ user ] []
-    in
-        li [] [ a [ href path ] [ text path ]]
