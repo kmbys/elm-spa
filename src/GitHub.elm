@@ -1,4 +1,4 @@
-module GitHub exposing (User, Repo, Issue, getRepos, getIssues)
+module GitHub exposing (User, Repo, Issue, getRepos, getIssues, issueUrl)
 
 import Url.Builder
 import Http
@@ -53,6 +53,21 @@ getIssues toMsg userName repoName =
                 toMsg
                 issuesDecoder
         }
+
+
+-- URL
+
+issueUrl : String -> String -> Int -> String
+issueUrl userName repoName issueNumber =
+    Url.Builder.crossOrigin
+        "https://github.com"
+        [ userName
+        , repoName
+        , "issues"
+        , String.fromInt issueNumber
+        ]
+        []
+
 
 -- DECODER
 

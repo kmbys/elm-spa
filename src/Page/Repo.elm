@@ -2,6 +2,7 @@ module Page.Repo exposing (Model, Msg, init, update, view)
 
 import Http
 import Html exposing (..)
+import Html.Attributes exposing (..)
 
 import GitHub
 
@@ -48,18 +49,21 @@ view model =
         Init ->
             text "Loading..."
         Loaded issues ->
-            ulIssues issues
+            ulIssues model.userName model.repoName issues
         Error error ->
             Debug.toString error |> text
 
-ulIssues : List GitHub.Issue -> Html Msg
-ulIssues issues =
-    ul [] (List.map liIssue issues)
+ulIssues : String -> String -> List GitHub.Issue -> Html Msg
+ulIssues userName repoName issues =
+    ul [] (List.map (liIssue userName repoName) issues)
 
-liIssue : GitHub.Issue -> Html msg
-liIssue issue =
+liIssue : String -> String -> GitHub.Issue -> Html Msg
+liIssue userName repoName issue =
     li []
         [ span [] [ text ("[" ++ issue.state ++ "]") ]
-        , span [] [ text ("#" ++ String.fromInt issue.number) ]
-        , span [] [ text issue.title ]
+        , a
+            [ href (GitHub.issueUrl userName repoName issue.number)
+            , target "_blank"
+            ]
+            [ text ("#" ++ String.fromInt issue.number), text issue.title ]
         ]
